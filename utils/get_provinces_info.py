@@ -6,7 +6,7 @@ from tqdm import tqdm
 def get_provinces_info():
     path = Path("assets/provinces_info.json")
     if path.exists():
-        print("Province information already exists. Skipping fetch.")
+        # print("Province information already exists. Skipping fetch.")
         return json.loads(path.read_text(encoding="utf-8"))
     print("Fetching province information...")
     provincias = [

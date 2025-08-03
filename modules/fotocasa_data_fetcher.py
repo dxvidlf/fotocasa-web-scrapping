@@ -166,6 +166,10 @@ class FotocasaDataFetcher:
             "size": 30
         }
         res = self._request_with_proxy("POST", url, headers=self.headers, json=payload)
+
+        if not res:
+            return (None, None, None)
+        
         data = res.json()
 
         items = data.get("items", [])
@@ -182,6 +186,10 @@ class FotocasaDataFetcher:
     def _get_v2(self, ids, lat, lon, next_page):
         url = "https://web.gw.fotocasa.es/v2/propertysearch/search/propertycoordinates"
         res = self._request_with_proxy("GET", url, headers=self.headers, params=self._build_params(ids, lat, lon, next_page))
+
+        if not res:
+            return (None, None, None)
+        
         data = res.json()
 
         if 'propertyCoordinates' in data and len(data['propertyCoordinates']) > 0:
@@ -217,15 +225,10 @@ class FotocasaDataFetcher:
         province = self.provinces_info[province_index-1]
         ids, lat, lon = province['ids'], province['latitude'], province['longitude']
 
-        try:
+        while True:
             first_items, total, size = self._get_v1(ids, lat, lon, next_page=1)
-        except Exception as e:
-            self.logger.error(f"Error inicial en _get_v1 para ids={ids}: {e}")
-            return
-
-        if not first_items:
-            self.logger.warning(f"No se encontraron anuncios iniciales para ids={ids}")
-            return
+            if first_items is not None:
+                break
 
         total_pages = math.ceil(total / size)
         set_total_pages_on_province(province_index,total_pages)
@@ -243,7 +246,6 @@ class FotocasaDataFetcher:
                     items_v2 = self._get_v2(ids, lat, lon, next_page)
                 except Exception as e:
                     self.logger.error(f"Error en petición página {next_page} para provincia {self._parse_v1(first_items[0]).get('province')}: {e}")
-                    self._handle_empty_or_error(next_page, self._parse_v1(first_items[0]).get('province'))
                     continue
                 
                 df1 = pd.DataFrame([self._parse_v1(ad) for ad in items_v1]).set_index('id') if items_v1 else pd.DataFrame()
@@ -257,7 +259,7 @@ class FotocasaDataFetcher:
                     if insert_ads_from_df(input_df=df) == 0:
                         self.consecutive_bad_inserts += 1
                     else:
-                        self.consecutive_bad_inserts += 0
+                        self.consecutive_bad_inserts = 0
 
                     if self.consecutive_bad_inserts >= self.MAX_CONSECUTIVE_BAD_INSERTS:  # Parada temprana por detección de replicación de anuncios
                         set_province_as_fetched(province_index)
@@ -280,7 +282,7 @@ class FotocasaDataFetcher:
         set_province_as_fetched(province_index)
         return True
     
-# Example usage
-if __name__ == "__main__":
-    FotocasaDataFetcher().fetch_ads_from_province(province_index=1)
+# # Example usage
+# if __name__ == "__main__":
+#     FotocasaDataFetcher().fetch_ads_from_province(province_index=5)
 
