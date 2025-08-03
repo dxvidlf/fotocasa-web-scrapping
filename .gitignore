@@ -1,3 +1,8 @@
+# Specific fies and folders
+assets/osm/*
+old/
+.vscode/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -77,6 +82,7 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+old/
 
 # IPython
 profile_default/
